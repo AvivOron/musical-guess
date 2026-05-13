@@ -151,15 +151,16 @@ export async function forceReveal(code: string, hostId: string): Promise<RoomSta
   if (!room || room.hostId !== hostId || room.phase !== 'listening') return null;
 
   const correctYear = room.currentSong!.year;
+  const NO_GUESS = -1;
   const results: RoundResult[] = room.players.map((p) => {
-    const guess = room.guesses[p.id] ?? null;
-    const distance = guess !== null ? Math.abs(guess - correctYear) : Infinity;
-    return { playerId: p.id, playerName: p.name, guess: guess ?? 0, distance, won: false };
+    const guessVal = room.guesses[p.id] ?? null;
+    const distance = guessVal !== null ? Math.abs(guessVal - correctYear) : NO_GUESS;
+    return { playerId: p.id, playerName: p.name, guess: guessVal ?? 0, distance, won: false };
   });
-  const submitted = results.filter((r) => r.distance !== Infinity);
-  const minDist = submitted.length > 0 ? Math.min(...submitted.map((r) => r.distance)) : Infinity;
+  const submitted = results.filter((r) => r.distance !== NO_GUESS);
+  const minDist = submitted.length > 0 ? Math.min(...submitted.map((r) => r.distance)) : NO_GUESS;
   results.forEach((r) => {
-    if (r.distance === minDist) {
+    if (minDist !== NO_GUESS && r.distance === minDist) {
       r.won = true;
       const player = room.players.find((p) => p.id === r.playerId)!;
       player.score += r.distance === 0 ? 2 : 1;

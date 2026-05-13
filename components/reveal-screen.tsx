@@ -14,7 +14,12 @@ type Props = {
 };
 
 export default function RevealScreen({ song, results, players, round, totalRounds, isHost, onNext }: Props) {
-  const sorted = [...results].sort((a, b) => a.distance - b.distance);
+  const sorted = [...results].sort((a, b) => {
+    if (a.distance === -1 && b.distance === -1) return 0;
+    if (a.distance === -1) return 1;
+    if (b.distance === -1) return -1;
+    return a.distance - b.distance;
+  });
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center p-6 gap-6" dir="rtl">
@@ -63,11 +68,17 @@ export default function RevealScreen({ song, results, players, round, totalRound
                     {isWinner && <Trophy className="w-3.5 h-3.5 text-yellow-400 shrink-0" />}
                   </div>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    ניחש <span className="text-zinc-300 font-medium">{result.guess}</span>
-                    {' · '}
-                    <span className={result.distance === 0 ? 'text-green-400 font-semibold' : 'text-zinc-400'}>
-                      {result.distance === 0 ? 'מדויק!' : `${result.distance} שנים הפרש`}
-                    </span>
+                    {result.distance === -1 ? (
+                      <span className="text-zinc-600">לא ניחש</span>
+                    ) : (
+                      <>
+                        ניחש <span className="text-zinc-300 font-medium">{result.guess}</span>
+                        {' · '}
+                        <span className={result.distance === 0 ? 'text-green-400 font-semibold' : 'text-zinc-400'}>
+                          {result.distance === 0 ? 'מדויק!' : `${result.distance} שנים הפרש`}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
