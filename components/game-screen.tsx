@@ -19,6 +19,7 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [guess, setGuess] = useState('');
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const submitted = submittedIds.includes(playerId);
 
   useEffect(() => {
@@ -42,9 +43,9 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) audio.play().catch(() => {});
+    if (playing && (isHost || audioUnlocked)) audio.play().catch(() => {});
     else audio.pause();
-  }, [playing]);
+  }, [playing, audioUnlocked]);
 
   const togglePlay = () => onPlay(!playing);
 
@@ -98,10 +99,18 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
           </>
         ) : (
           <div className="flex flex-col items-center gap-3 py-2">
-            <div className={`w-28 h-28 rounded-full border-2 flex items-center justify-center transition-all ${
-              playing ? 'border-yellow-400/50 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900'
-            }`}>
-              {playing ? (
+            <button
+              onClick={() => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                setAudioUnlocked(true);
+                if (playing) audio.play().catch(() => {});
+              }}
+              className={`w-28 h-28 rounded-full border-2 flex items-center justify-center transition-all active:scale-95 ${
+                playing ? 'border-yellow-400/50 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900'
+              }`}
+            >
+              {playing && audioUnlocked ? (
                 <div className="flex gap-1.5 items-end h-8">
                   {[1,2,3,4].map((i) => (
                     <div
@@ -112,11 +121,11 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
                   ))}
                 </div>
               ) : (
-                <Music2 className="w-10 h-10 text-zinc-700" />
+                <Music2 className={`w-10 h-10 ${playing ? 'text-yellow-400' : 'text-zinc-700'}`} />
               )}
-            </div>
+            </button>
             <p className="text-zinc-500 text-sm">
-              {playing ? 'השיר מתנגן...' : 'ממתין למארח...'}
+              {playing && !audioUnlocked ? 'הקש להאזנה' : playing ? 'השיר מתנגן...' : 'ממתין למארח...'}
             </p>
           </div>
         )}
