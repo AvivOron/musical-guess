@@ -86,6 +86,15 @@ export default function Home() {
     });
   };
 
+  const handleReveal = async () => {
+    setPlaying(false);
+    await fetch(`${BASE}/api/room/reveal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, hostId: playerId }),
+    });
+  };
+
   const handleRestart = () => {
     setRoomCode(null);
     setRoom(null);
@@ -123,6 +132,7 @@ export default function Home() {
         playing={playing}
         onPlay={handlePlay}
         onGuess={handleGuess}
+        onReveal={handleReveal}
       />
     );
   }

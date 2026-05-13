@@ -146,6 +146,31 @@ export async function submitGuess(code: string, playerId: string, year: number):
   return room;
 }
 
+export async function forceReveal(code: string, hostId: string): Promise<RoomState | null> {
+  const room = await getRoom(code);
+  if (!room || room.hostId !== hostId || room.phase !== 'listening') return null;
+
+  const correctYear = room.currentSong!.year;
+  const results: RoundResult[] = room.players.map((p) => {
+    const guess = room.guesses[p.id] ?? null;
+    const distance = guess !== null ? Math.abs(guess - correctYear) : Infinity;
+    return { playerId: p.id, playerName: p.name, guess: guess ?? 0, distance, won: false };
+  });
+  const submitted = results.filter((r) => r.distance !== Infinity);
+  const minDist = submitted.length > 0 ? Math.min(...submitted.map((r) => r.distance)) : Infinity;
+  results.forEach((r) => {
+    if (r.distance === minDist) {
+      r.won = true;
+      const player = room.players.find((p) => p.id === r.playerId)!;
+      player.score += r.distance === 0 ? 2 : 1;
+    }
+  });
+  room.roundResults = results;
+  room.phase = 'revealing';
+  await saveRoom(room);
+  return room;
+}
+
 export async function nextRound(code: string): Promise<RoomState | null> {
   const room = await getRoom(code);
   if (!room) return null;

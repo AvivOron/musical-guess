@@ -13,9 +13,10 @@ type Props = {
   playing: boolean;
   onPlay: (playing: boolean) => void;
   onGuess: (year: number) => void;
+  onReveal: () => void;
 };
 
-export default function GameScreen({ previewUrl, players, submittedIds, playerId, isHost, playing, onPlay, onGuess }: Props) {
+export default function GameScreen({ previewUrl, players, submittedIds, playerId, isHost, playing, onPlay, onGuess, onReveal }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [guess, setGuess] = useState('');
@@ -96,6 +97,12 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
                 <p className="text-center text-zinc-600 text-xs">כולם שומעים את השיר</p>
               )}
             </div>
+            <button
+              onClick={onReveal}
+              className="w-full py-2.5 rounded-xl border border-zinc-700 text-zinc-400 text-sm hover:border-zinc-500 hover:text-zinc-200 active:scale-95 transition-all"
+            >
+              סיים סיבוב
+            </button>
           </>
         ) : (
           <div className="flex flex-col items-center gap-3 py-2">
