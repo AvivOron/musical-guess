@@ -1,65 +1,147 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useRoom } from '@/lib/use-room';
+import LobbyScreen from '@/components/lobby-screen';
+import LoadingScreen from '@/components/loading-screen';
+import GameScreen from '@/components/game-screen';
+import RevealScreen from '@/components/reveal-screen';
+import ScoreboardScreen from '@/components/scoreboard-screen';
+
+function generateId() {
+  return Math.random().toString(36).slice(2, 10);
+}
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [playerId] = useState(() => {
+    if (typeof window === 'undefined') return generateId();
+    const stored = sessionStorage.getItem('hitster_player_id');
+    if (stored) return stored;
+    const id = generateId();
+    sessionStorage.setItem('hitster_player_id', id);
+    return id;
+  });
+
+  const { room, setRoom, playing, setPlaying } = useRoom(roomCode);
+
+  const handleCreate = async (hostName: string, totalRounds: number) => {
+    const res = await fetch('/api/room/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hostId: playerId, hostName, totalRounds }),
+    });
+    const { roomCode: code } = await res.json();
+    const roomRes = await fetch(`/api/room/join?code=${code}`);
+    const roomData = await roomRes.json();
+    setRoom(roomData);
+    setRoomCode(code);
+  };
+
+  const handleJoin = async (code: string, playerName: string) => {
+    const res = await fetch('/api/room/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode: code, playerId, playerName }),
+    });
+    if (!res.ok) { alert('Room not found or game already started'); return; }
+    const data = await res.json();
+    setRoom(data);
+    setRoomCode(code);
+  };
+
+  const handleStart = async () => {
+    await fetch('/api/room/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, hostId: playerId }),
+    });
+  };
+
+  const handleGuess = async (year: number) => {
+    await fetch('/api/room/guess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, playerId, year }),
+    });
+  };
+
+  const handlePlay = async (p: boolean) => {
+    setPlaying(p);
+    await fetch('/api/room/play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, hostId: playerId, playing: p }),
+    });
+  };
+
+  const handleNext = async () => {
+    setPlaying(false);
+    await fetch('/api/room/next', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, hostId: playerId }),
+    });
+  };
+
+  const handleRestart = () => {
+    setRoomCode(null);
+    setRoom(null);
+  };
+
+  if (!roomCode || !room) {
+    return <LobbyScreen onCreate={handleCreate} onJoin={handleJoin} />;
+  }
+
+  const isHost = room.hostId === playerId;
+  const me = room.players.find((p) => p.id === playerId);
+
+  if (room.phase === 'lobby') {
+    return (
+      <LobbyScreen
+        onCreate={handleCreate}
+        onJoin={handleJoin}
+        room={room}
+        isHost={isHost}
+        onStart={handleStart}
+      />
+    );
+  }
+
+  if (room.phase === 'loading') return <LoadingScreen />;
+
+  if (room.phase === 'listening') {
+    return (
+      <GameScreen
+        previewUrl={room.currentSong?.previewUrl ?? ''}
+        players={room.players}
+        submittedIds={room.submittedIds}
+        playerId={playerId}
+        isHost={isHost}
+        playing={playing}
+        onPlay={handlePlay}
+        onGuess={handleGuess}
+      />
+    );
+  }
+
+  if (room.phase === 'revealing') {
+    return (
+      <RevealScreen
+        song={room.currentSong as { title: string; artist: string; year: number; previewUrl: string }}
+        results={room.roundResults}
+        players={room.players}
+        round={room.round}
+        totalRounds={room.totalRounds}
+        isHost={isHost}
+        onNext={handleNext}
+      />
+    );
+  }
+
+  if (room.phase === 'gameover') {
+    return <ScoreboardScreen players={room.players} onRestart={isHost ? handleRestart : undefined} />;
+  }
+
+  return null;
 }

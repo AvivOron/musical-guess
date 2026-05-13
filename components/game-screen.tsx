@@ -1,0 +1,180 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { Play, Pause, Check, Music2 } from 'lucide-react';
+import { ServerPlayer } from '@/lib/server/store';
+
+type Props = {
+  previewUrl: string;
+  players: ServerPlayer[];
+  submittedIds: string[];
+  playerId: string;
+  isHost: boolean;
+  playing: boolean;
+  onPlay: (playing: boolean) => void;
+  onGuess: (year: number) => void;
+};
+
+export default function GameScreen({ previewUrl, players, submittedIds, playerId, isHost, playing, onPlay, onGuess }: Props) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [progress, setProgress] = useState(0);
+  const [guess, setGuess] = useState('');
+  const submitted = submittedIds.includes(playerId);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.src = previewUrl;
+    setProgress(0);
+    const onTimeUpdate = () => {
+      if (audio.duration) setProgress(audio.currentTime / audio.duration);
+    };
+    const onEnded = () => onPlay(false);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+    return () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+      audio.pause();
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) audio.play().catch(() => {});
+    else audio.pause();
+  }, [playing]);
+
+  const togglePlay = () => onPlay(!playing);
+
+  const submitGuess = () => {
+    const val = parseInt(guess);
+    if (isNaN(val) || val < 1900 || val > 2025) return;
+    onGuess(val);
+  };
+
+  const answeredCount = submittedIds.length;
+  const totalCount = players.length;
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center p-6 gap-8" dir="rtl">
+      <audio ref={audioRef} />
+
+      {/* Header */}
+      <div className="w-full max-w-sm pt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-zinc-500 text-sm">
+          <Music2 className="w-4 h-4" />
+          <span>ניחושים מוזיקליים</span>
+        </div>
+        <span className="text-zinc-500 text-sm">{answeredCount}/{totalCount} ענו</span>
+      </div>
+
+      {/* Player controls */}
+      <div className="w-full max-w-sm flex flex-col items-center gap-5">
+        {isHost ? (
+          <>
+            <button
+              onClick={togglePlay}
+              className={`w-28 h-28 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-95 ${
+                playing
+                  ? 'bg-zinc-800 border-2 border-zinc-700 text-white hover:bg-zinc-700'
+                  : 'bg-yellow-400 text-zinc-950 hover:bg-yellow-300 shadow-yellow-400/30'
+              }`}
+            >
+              {playing ? <Pause className="w-11 h-11" /> : <Play className="w-11 h-11 mr-[-4px]" />}
+            </button>
+            <div className="w-full space-y-1.5">
+              <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-yellow-400 rounded-full transition-all duration-300"
+                  style={{ width: `${progress * 100}%` }}
+                />
+              </div>
+              {playing && (
+                <p className="text-center text-zinc-600 text-xs">כולם שומעים את השיר</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-2">
+            <div className={`w-28 h-28 rounded-full border-2 flex items-center justify-center transition-all ${
+              playing ? 'border-yellow-400/50 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900'
+            }`}>
+              {playing ? (
+                <div className="flex gap-1.5 items-end h-8">
+                  {[1,2,3,4].map((i) => (
+                    <div
+                      key={i}
+                      className="w-1.5 bg-yellow-400 rounded-full animate-bounce"
+                      style={{ animationDelay: `${i * 0.1}s`, height: `${[60,100,80,40][i-1]}%` }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Music2 className="w-10 h-10 text-zinc-700" />
+              )}
+            </div>
+            <p className="text-zinc-500 text-sm">
+              {playing ? 'השיר מתנגן...' : 'ממתין למארח...'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Guess input */}
+      <div className="w-full max-w-sm">
+        {submitted ? (
+          <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-6 flex flex-col items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+              <Check className="w-5 h-5 text-green-400" />
+            </div>
+            <span className="text-green-400 font-semibold">ניחוש נשלח!</span>
+            <span className="text-zinc-600 text-sm">ממתין לשאר השחקנים...</span>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-4">
+            <p className="text-center text-zinc-400 text-sm font-medium">באיזו שנה יצא השיר?</p>
+            <input
+              type="number"
+              placeholder="למשל: 1985"
+              value={guess}
+              onChange={(e) => setGuess(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submitGuess()}
+              min={1940}
+              max={2025}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-white text-center placeholder-zinc-700 focus:outline-none focus:border-yellow-400/60 text-2xl font-bold tracking-widest transition-colors"
+            />
+            <button
+              onClick={submitGuess}
+              disabled={!guess}
+              className="w-full py-3.5 rounded-xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
+            >
+              שלח ניחוש
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Players list */}
+      <div className="w-full max-w-sm grid grid-cols-2 gap-2">
+        {players.map((p) => {
+          const done = submittedIds.includes(p.id);
+          const isMe = p.id === playerId;
+          return (
+            <div
+              key={p.id}
+              className={`rounded-xl px-3 py-2.5 flex items-center gap-2 border transition-colors ${
+                done ? 'border-green-500/20 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/40'
+              } ${isMe ? 'ring-1 ring-yellow-400/30' : ''}`}
+            >
+              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${done ? 'bg-green-400' : 'bg-zinc-700'}`} />
+              <span className={`text-sm truncate ${isMe ? 'text-white font-semibold' : 'text-zinc-400'}`}>{p.name}</span>
+              {p.isHost && <span className="text-yellow-400 text-xs shrink-0">★</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
