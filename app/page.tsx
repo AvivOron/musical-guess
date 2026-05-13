@@ -12,6 +12,8 @@ function generateId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
 export default function Home() {
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [playerId] = useState(() => {
@@ -26,20 +28,20 @@ export default function Home() {
   const { room, setRoom, playing, setPlaying } = useRoom(roomCode);
 
   const handleCreate = async (hostName: string, totalRounds: number) => {
-    const res = await fetch('/api/room/create', {
+    const res = await fetch(`${BASE}/api/room/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hostId: playerId, hostName, totalRounds }),
     });
     const { roomCode: code } = await res.json();
-    const roomRes = await fetch(`/api/room/join?code=${code}`);
+    const roomRes = await fetch(`${BASE}/api/room/join?code=${code}`);
     const roomData = await roomRes.json();
     setRoom(roomData);
     setRoomCode(code);
   };
 
   const handleJoin = async (code: string, playerName: string) => {
-    const res = await fetch('/api/room/join', {
+    const res = await fetch(`${BASE}/api/room/join`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomCode: code, playerId, playerName }),
@@ -51,7 +53,7 @@ export default function Home() {
   };
 
   const handleStart = async () => {
-    await fetch('/api/room/start', {
+    await fetch(`${BASE}/api/room/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomCode, hostId: playerId }),
@@ -59,7 +61,7 @@ export default function Home() {
   };
 
   const handleGuess = async (year: number) => {
-    await fetch('/api/room/guess', {
+    await fetch(`${BASE}/api/room/guess`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomCode, playerId, year }),
@@ -68,7 +70,7 @@ export default function Home() {
 
   const handlePlay = async (p: boolean) => {
     setPlaying(p);
-    await fetch('/api/room/play', {
+    await fetch(`${BASE}/api/room/play`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomCode, hostId: playerId, playing: p }),
@@ -77,7 +79,7 @@ export default function Home() {
 
   const handleNext = async () => {
     setPlaying(false);
-    await fetch('/api/room/next', {
+    await fetch(`${BASE}/api/room/next`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomCode, hostId: playerId }),

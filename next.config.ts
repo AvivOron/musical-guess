@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 
+const basePath = '/musical-guess';
+
 const nextConfig: NextConfig = {
-  basePath: '/musical-guess',
+  basePath,
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
   images: {
     remotePatterns: [
       { hostname: 'is1-ssl.mzstatic.com' },
