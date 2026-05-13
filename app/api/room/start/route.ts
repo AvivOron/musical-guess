@@ -3,12 +3,12 @@ import { setRoomLoading, popNextSeed, setRoomSong, getRoom } from '@/lib/server/
 import { broadcastState } from '@/lib/server/pusher';
 
 async function fetchPreview(title: string, artist: string): Promise<string | null> {
-  const params = new URLSearchParams({ title, artist });
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-  const res = await fetch(`${base}/api/preview?${params}`);
+  const query = encodeURIComponent(`track:"${title}" artist:"${artist}"`);
+  const res = await fetch(`https://api.deezer.com/search?q=${query}&limit=5`);
   if (!res.ok) return null;
-  const { previewUrl } = await res.json();
-  return previewUrl ?? null;
+  const data = await res.json();
+  const track = (data.data ?? []).find((t: { preview: string }) => t.preview);
+  return track?.preview ?? null;
 }
 
 export async function POST(req: NextRequest) {
