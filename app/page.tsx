@@ -25,6 +25,11 @@ export default function Home() {
     return id;
   });
 
+  const [inviteCode, setInviteCode] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('code');
+  });
+
   const { room, setRoom, playing, setPlaying } = useRoom(roomCode);
 
   const handleCreate = async (hostName: string, totalRounds: number) => {
@@ -101,7 +106,7 @@ export default function Home() {
   };
 
   if (!roomCode || !room) {
-    return <LobbyScreen onCreate={handleCreate} onJoin={handleJoin} />;
+    return <LobbyScreen onCreate={handleCreate} onJoin={handleJoin} inviteCode={inviteCode} />;
   }
 
   const isHost = room.hostId === playerId;

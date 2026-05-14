@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Music2, Users } from 'lucide-react';
+import { Music2, Users, Share2, Check } from 'lucide-react';
 import { ClientRoom } from '@/lib/use-room';
 
 type Props = {
@@ -10,15 +10,29 @@ type Props = {
   room?: ClientRoom;
   isHost?: boolean;
   onStart?: () => void;
+  inviteCode?: string | null;
 };
 
-export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart }: Props) {
-  const [tab, setTab] = useState<'create' | 'join'>('create');
+export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, inviteCode }: Props) {
+  const [tab, setTab] = useState<'create' | 'join'>(inviteCode ? 'join' : 'create');
   const [name, setName] = useState('');
-  const [code, setCode] = useState(['', '', '', '']);
+  const [code, setCode] = useState(inviteCode ? inviteCode.toUpperCase().split('') : ['', '', '', '']);
+  const [copied, setCopied] = useState(false);
   const [rounds, setRounds] = useState(10);
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
   const codeStr = code.join('');
+
+  const shareInvite = (roomCode: string) => {
+    const url = `${window.location.origin}${window.location.pathname}?code=${roomCode}`;
+    if (navigator.share) {
+      navigator.share({ title: 'ניחושים מוזיקליים', url });
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  };
 
   if (room) {
     return (
@@ -32,7 +46,13 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart }:
               </div>
             ))}
           </div>
-          <p className="text-zinc-500 text-sm pt-2">שתפו עם החברים</p>
+          <button
+            onClick={() => shareInvite(room.roomCode)}
+            className="mt-3 flex items-center gap-2 mx-auto text-sm text-zinc-400 hover:text-yellow-400 transition-colors"
+          >
+            {copied ? <Check className="w-4 h-4 text-green-400" /> : <Share2 className="w-4 h-4" />}
+            {copied ? 'הקישור הועתק!' : 'שתף קישור הצטרפות'}
+          </button>
         </div>
 
         <div className="w-full max-w-xs space-y-3">
