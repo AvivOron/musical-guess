@@ -1,14 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { Trophy, RotateCcw, Crown } from 'lucide-react';
 import { ServerPlayer } from '@/lib/server/store';
 
 type Props = {
   players: ServerPlayer[];
-  onRestart?: () => void;
+  onRestart?: () => Promise<void>;
 };
 
 export default function ScoreboardScreen({ players, onRestart }: Props) {
+  const [loading, setLoading] = useState(false);
+
+  const handleRestart = async () => {
+    if (!onRestart || loading) return;
+    setLoading(true);
+    try { await onRestart(); } finally { setLoading(false); }
+  };
   const sorted = [...players].sort((a, b) => b.score - a.score);
   const winner = sorted[0];
 
@@ -56,11 +64,11 @@ export default function ScoreboardScreen({ players, onRestart }: Props) {
 
         {onRestart && (
           <button
-            onClick={onRestart}
-            className="w-full py-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-bold text-base hover:border-yellow-400/40 hover:text-yellow-400 active:scale-95 transition-all flex items-center justify-center gap-2"
+            onClick={handleRestart}
+            disabled={loading}
+            className="w-full py-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-bold text-base hover:border-yellow-400/40 hover:text-yellow-400 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            <RotateCcw className="w-5 h-5" />
-            משחק חדש
+            {loading ? '...' : <><RotateCcw className="w-5 h-5" />משחק חדש</>}
           </button>
         )}
       </div>

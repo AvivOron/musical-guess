@@ -11,9 +11,9 @@ type Props = {
   playerId: string;
   isHost: boolean;
   playing: boolean;
-  onPlay: (playing: boolean) => void;
-  onGuess: (year: number) => void;
-  onReveal: () => void;
+  onPlay: (playing: boolean) => Promise<void>;
+  onGuess: (year: number) => Promise<void>;
+  onReveal: () => Promise<void>;
 };
 
 export default function GameScreen({ previewUrl, players, submittedIds, playerId, isHost, playing, onPlay, onGuess, onReveal }: Props) {
@@ -21,6 +21,13 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
   const [progress, setProgress] = useState(0);
   const [guess, setGuess] = useState('');
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [loading, setLoading] = useState<'guess' | 'reveal' | null>(null);
+
+  const wrap = (key: 'guess' | 'reveal', fn: () => void | Promise<void>) => async () => {
+    if (loading) return;
+    setLoading(key);
+    try { await fn(); } finally { setLoading(null); }
+  };
   const submitted = submittedIds.includes(playerId);
 
   useEffect(() => {
@@ -50,11 +57,11 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
 
   const togglePlay = () => onPlay(!playing);
 
-  const submitGuess = () => {
+  const submitGuess = wrap('guess', () => {
     const val = parseInt(guess);
     if (isNaN(val) || val < 1900 || val > 2025) return;
-    onGuess(val);
-  };
+    return onGuess(val);
+  });
 
   const answeredCount = submittedIds.length;
   const totalCount = players.length;
@@ -98,10 +105,11 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
               )}
             </div>
             <button
-              onClick={onReveal}
-              className="w-full py-2.5 rounded-xl border border-zinc-700 text-zinc-400 text-sm hover:border-zinc-500 hover:text-zinc-200 active:scale-95 transition-all"
+              onClick={wrap('reveal', () => onReveal())}
+              disabled={loading === 'reveal'}
+              className="w-full py-2.5 rounded-xl border border-zinc-700 text-zinc-400 text-sm hover:border-zinc-500 hover:text-zinc-200 active:scale-95 transition-all disabled:opacity-50"
             >
-              סיים סיבוב
+              {loading === 'reveal' ? '...' : 'סיים סיבוב'}
             </button>
           </>
         ) : (
@@ -163,10 +171,10 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
             />
             <button
               onClick={submitGuess}
-              disabled={!guess}
+              disabled={!guess || loading === 'guess'}
               className="w-full py-3.5 rounded-xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
             >
-              שלח ניחוש
+              {loading === 'guess' ? '...' : 'שלח ניחוש'}
             </button>
           </div>
         )}

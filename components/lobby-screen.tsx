@@ -18,6 +18,13 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
   const [name, setName] = useState('');
   const [code, setCode] = useState(inviteCode ? inviteCode.toUpperCase().split('') : ['', '', '', '']);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const wrap = (fn: () => void | Promise<void>) => async () => {
+    if (loading) return;
+    setLoading(true);
+    try { await fn(); } finally { setLoading(false); }
+  };
   const [rounds, setRounds] = useState(10);
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
   const codeStr = code.join('');
@@ -69,10 +76,11 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
 
         {isHost ? (
           <button
-            onClick={onStart}
-            className="w-full max-w-xs py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-lg hover:bg-yellow-300 active:scale-95 transition-all shadow-lg shadow-yellow-400/20"
+            onClick={wrap(async () => { onStart?.(); })}
+            disabled={loading}
+            className="w-full max-w-xs py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-lg hover:bg-yellow-300 active:scale-95 transition-all shadow-lg shadow-yellow-400/20 disabled:opacity-60"
           >
-            התחל משחק
+            {loading ? '...' : 'התחל משחק'}
           </button>
         ) : (
           <div className="flex items-center gap-2 text-zinc-500 text-sm">
@@ -131,11 +139,11 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
               />
             </div>
             <button
-              onClick={() => name.trim() && onCreate(name.trim(), rounds)}
-              disabled={!name.trim()}
+              onClick={wrap(() => { if (name.trim()) return onCreate(name.trim(), rounds); })}
+              disabled={!name.trim() || loading}
               className="w-full py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
             >
-              צור חדר
+              {loading ? '...' : 'צור חדר'}
             </button>
           </div>
         ) : (
@@ -177,11 +185,11 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
               ))}
             </div>
             <button
-              onClick={() => name.trim() && codeStr.length === 4 && onJoin(codeStr, name.trim())}
-              disabled={!name.trim() || codeStr.length !== 4}
+              onClick={wrap(() => { if (name.trim() && codeStr.length === 4) return onJoin(codeStr, name.trim()); })}
+              disabled={!name.trim() || codeStr.length !== 4 || loading}
               className="w-full py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
             >
-              הצטרף
+              {loading ? '...' : 'הצטרף'}
             </button>
           </div>
         )}

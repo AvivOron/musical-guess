@@ -1,6 +1,7 @@
 'use client';
 
 import { Trophy, ArrowLeft, Music2 } from 'lucide-react';
+import { useState } from 'react';
 import { RoundResult, ServerPlayer } from '@/lib/server/store';
 
 type Props = {
@@ -10,10 +11,18 @@ type Props = {
   round: number;
   totalRounds: number;
   isHost: boolean;
-  onNext: () => void;
+  onNext: () => Promise<void>;
 };
 
 export default function RevealScreen({ song, results, players, round, totalRounds, isHost, onNext }: Props) {
+  const [loading, setLoading] = useState(false);
+
+  const handleNext = async () => {
+    if (loading) return;
+    setLoading(true);
+    try { await onNext(); } finally { setLoading(false); }
+  };
+
   const sorted = [...results].sort((a, b) => {
     if (a.distance === -1 && b.distance === -1) return 0;
     if (a.distance === -1) return 1;
@@ -92,11 +101,11 @@ export default function RevealScreen({ song, results, players, round, totalRound
 
         {isHost ? (
           <button
-            onClick={onNext}
-            className="w-full py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-400/20"
+            onClick={handleNext}
+            disabled={loading}
+            className="w-full py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-400/20 disabled:opacity-60"
           >
-            {round >= totalRounds ? 'לוח התוצאות' : 'סיבוב הבא'}
-            <ArrowLeft className="w-5 h-5" />
+            {loading ? '...' : <>{round >= totalRounds ? 'לוח התוצאות' : 'סיבוב הבא'}<ArrowLeft className="w-5 h-5" /></>}
           </button>
         ) : (
           <div className="flex items-center justify-center gap-2 text-zinc-500 text-sm py-2">
