@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'missing params' }, { status: 400 });
 
   const room = await submitGuess(roomCode, playerId, year);
-  if (!room) return NextResponse.json({ error: 'room not found or already submitted' }, { status: 400 });
+  if (!room) return NextResponse.json({ error: 'room not found' }, { status: 404 });
+  if (room === 'already_submitted') return NextResponse.json({ ok: true });
 
   await broadcastState(room);
   return NextResponse.json({ ok: true });

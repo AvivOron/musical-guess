@@ -6,7 +6,7 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-const TTL = 60 * 60 * 6; // 6 hours
+const TTL = 60 * 60 * 24; // 24 hours
 
 export type ServerPlayer = {
   id: string;
@@ -132,9 +132,10 @@ export async function setRoomSong(
   return room;
 }
 
-export async function submitGuess(code: string, playerId: string, year: number): Promise<RoomState | null> {
+export async function submitGuess(code: string, playerId: string, year: number): Promise<RoomState | null | 'already_submitted'> {
   const room = await getRoom(code);
-  if (!room || room.submittedIds.includes(playerId)) return null;
+  if (!room) return null;
+  if (room.submittedIds.includes(playerId)) return 'already_submitted';
 
   room.guesses[playerId] = year;
   room.submittedIds.push(playerId);
@@ -164,7 +165,9 @@ export async function submitGuess(code: string, playerId: string, year: number):
 
 export async function forceReveal(code: string, hostId: string): Promise<RoomState | null> {
   const room = await getRoom(code);
-  if (!room || room.hostId !== hostId || room.phase !== 'listening') return null;
+  if (!room || room.hostId !== hostId) return null;
+  if (room.phase === 'revealing') return room;
+  if (room.phase !== 'listening') return null;
 
   const correctYear = room.currentSong!.year;
   const NO_GUESS = -1;
