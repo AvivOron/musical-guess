@@ -100,9 +100,12 @@ export default function Home() {
     });
   };
 
-  const handleRestart = () => {
-    setRoomCode(null);
-    setRoom(null);
+  const handleRestart = async () => {
+    await fetch(`${BASE}/api/room/restart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, hostId: playerId }),
+    });
   };
 
   if (!roomCode || !room) {

@@ -81,6 +81,22 @@ export async function createRoom(hostId: string, hostName: string, totalRounds: 
 
 export { getRoom };
 
+export async function restartRoom(code: string, hostId: string, totalRounds?: number): Promise<RoomState | null> {
+  const room = await getRoom(code);
+  if (!room || room.hostId !== hostId || room.phase !== 'gameover') return null;
+  room.phase = 'lobby';
+  room.round = 0;
+  room.totalRounds = totalRounds ?? room.totalRounds;
+  room.currentSong = null;
+  room.guesses = {};
+  room.submittedIds = [];
+  room.roundResults = [];
+  room.deck = shuffleDeck(SONG_SEEDS);
+  room.players.forEach((p) => { p.score = 0; });
+  await saveRoom(room);
+  return room;
+}
+
 export async function joinRoom(code: string, playerId: string, playerName: string): Promise<RoomState | null> {
   const room = await getRoom(code);
   if (!room) return null;
