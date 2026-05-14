@@ -132,13 +132,39 @@ export async function setRoomSong(
   return room;
 }
 
-export async function submitGuess(code: string, playerId: string, year: number): Promise<RoomState | null | 'already_submitted'> {
-  const room = await getRoom(code);
-  if (!room) return null;
-  if (room.submittedIds.includes(playerId)) return 'already_submitted';
+// Atomically register a guess using a Lua script to avoid the TOCTOU race
+// when two players submit at the exact same moment.
+const submitGuessScript = `
+local key = KEYS[1]
+local playerId = ARGV[1]
+local year = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
 
-  room.guesses[playerId] = year;
-  room.submittedIds.push(playerId);
+local raw = redis.call('GET', key)
+if not raw then return false end
+
+local room = cjson.decode(raw)
+
+for _, id in ipairs(room.submittedIds) do
+  if id == playerId then return cjson.encode({status='already_submitted'}) end
+end
+
+room.guesses[playerId] = year
+table.insert(room.submittedIds, playerId)
+
+local encoded = cjson.encode(room)
+redis.call('SET', key, encoded, 'EX', ttl)
+return cjson.encode({status='ok', room=room})
+`;
+
+export async function submitGuess(code: string, playerId: string, year: number): Promise<RoomState | null | 'already_submitted'> {
+  const roomKey = key(code);
+  const parsed = await redis.eval(submitGuessScript, [roomKey], [playerId, String(year), String(TTL)]) as { status: string; room?: RoomState } | null | false;
+
+  if (!parsed) return null;
+  if (parsed.status === 'already_submitted') return 'already_submitted';
+
+  const room = parsed.room! as RoomState;
 
   if (room.submittedIds.length === room.players.length) {
     const correctYear = room.currentSong!.year;
@@ -157,9 +183,9 @@ export async function submitGuess(code: string, playerId: string, year: number):
     });
     room.roundResults = results;
     room.phase = 'revealing';
+    await saveRoom(room);
   }
 
-  await saveRoom(room);
   return room;
 }
 
