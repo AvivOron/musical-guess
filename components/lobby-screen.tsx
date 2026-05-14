@@ -24,14 +24,10 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
 
   const shareInvite = (roomCode: string) => {
     const url = `${window.location.origin}${window.location.pathname}?code=${roomCode}`;
-    if (navigator.share) {
-      navigator.share({ title: 'ניחושים מוזיקליים', url });
-    } else {
-      navigator.clipboard.writeText(url).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      });
-    }
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   if (room) {
