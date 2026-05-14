@@ -133,49 +133,34 @@ export async function setRoomSong(
 }
 
 export async function submitGuess(code: string, playerId: string, year: number): Promise<RoomState | null | 'already_submitted'> {
-  const k = key(code);
+  const room = await getRoom(code);
+  if (!room) return null;
+  if (room.submittedIds.includes(playerId)) return 'already_submitted';
 
-  // Atomic get-modify-set via Lua to prevent race conditions when two players submit simultaneously
-  const luaScript = `
-    local raw = redis.call('GET', KEYS[1])
-    if not raw then return nil end
-    local room = cjson.decode(raw)
-    for _, id in ipairs(room.submittedIds) do
-      if id == ARGV[1] then return 'already_submitted' end
-    end
-    room.guesses[ARGV[1]] = tonumber(ARGV[2])
-    table.insert(room.submittedIds, ARGV[1])
-    if #room.submittedIds == #room.players then
-      local correctYear = room.currentSong.year
-      local results = {}
-      local minDist = math.huge
-      for _, p in ipairs(room.players) do
-        local g = room.guesses[p.id] or 0
-        local dist = math.abs(g - correctYear)
-        if dist < minDist then minDist = dist end
-        table.insert(results, {playerId=p.id, playerName=p.name, guess=g, distance=dist, won=false})
-      end
-      for _, r in ipairs(results) do
-        if r.distance == minDist then
-          r.won = true
-          for _, p in ipairs(room.players) do
-            if p.id == r.playerId then
-              if r.distance == 0 then p.score = p.score + 2 else p.score = p.score + 1 end
-            end
-          end
-        end
-      end
-      room.roundResults = results
-      room.phase = 'revealing'
-    end
-    redis.call('SET', KEYS[1], cjson.encode(room), 'EX', ARGV[3])
-    return cjson.encode(room)
-  `;
+  room.guesses[playerId] = year;
+  room.submittedIds.push(playerId);
 
-  const result = await redis.eval(luaScript, [k], [playerId, String(year), String(TTL)]) as string | null;
-  if (!result) return null;
-  if (result === 'already_submitted') return 'already_submitted';
-  return JSON.parse(result) as RoomState;
+  if (room.submittedIds.length === room.players.length) {
+    const correctYear = room.currentSong!.year;
+    const results: RoundResult[] = room.players.map((p) => {
+      const guess = room.guesses[p.id] ?? 0;
+      const distance = Math.abs(guess - correctYear);
+      return { playerId: p.id, playerName: p.name, guess, distance, won: false };
+    });
+    const minDist = Math.min(...results.map((r) => r.distance));
+    results.forEach((r) => {
+      if (r.distance === minDist) {
+        r.won = true;
+        const player = room.players.find((p) => p.id === r.playerId)!;
+        player.score += r.distance === 0 ? 2 : 1;
+      }
+    });
+    room.roundResults = results;
+    room.phase = 'revealing';
+  }
+
+  await saveRoom(room);
+  return room;
 }
 
 export async function forceReveal(code: string, hostId: string): Promise<RoomState | null> {
