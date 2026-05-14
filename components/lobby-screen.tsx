@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Music2, Users, Share2, Check } from 'lucide-react';
+import Spinner from './spinner';
 import { ClientRoom } from '@/lib/use-room';
 
 type Props = {
@@ -9,7 +10,7 @@ type Props = {
   onJoin: (code: string, playerName: string) => void;
   room?: ClientRoom;
   isHost?: boolean;
-  onStart?: () => void;
+  onStart?: () => Promise<void>;
   inviteCode?: string | null;
 };
 
@@ -76,11 +77,11 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
 
         {isHost ? (
           <button
-            onClick={wrap(async () => { onStart?.(); })}
+            onClick={wrap(() => onStart?.())}
             disabled={loading}
             className="w-full max-w-xs py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-lg hover:bg-yellow-300 active:scale-95 transition-all shadow-lg shadow-yellow-400/20 disabled:opacity-60"
           >
-            {loading ? '...' : 'התחל משחק'}
+            {loading ? <Spinner /> : 'התחל משחק'}
           </button>
         ) : (
           <div className="flex items-center gap-2 text-zinc-500 text-sm">
@@ -143,7 +144,7 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
               disabled={!name.trim() || loading}
               className="w-full py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
             >
-              {loading ? '...' : 'צור חדר'}
+              {loading ? <Spinner /> : 'צור חדר'}
             </button>
           </div>
         ) : (
@@ -189,7 +190,7 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
               disabled={!name.trim() || codeStr.length !== 4 || loading}
               className="w-full py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
             >
-              {loading ? '...' : 'הצטרף'}
+              {loading ? <Spinner /> : 'הצטרף'}
             </button>
           </div>
         )}

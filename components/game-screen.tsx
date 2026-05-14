@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Check, Music2 } from 'lucide-react';
+import Spinner from './spinner';
 import { ServerPlayer } from '@/lib/server/store';
 
 type Props = {
@@ -109,7 +110,7 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
               disabled={loading === 'reveal'}
               className="w-full py-2.5 rounded-xl border border-zinc-700 text-zinc-400 text-sm hover:border-zinc-500 hover:text-zinc-200 active:scale-95 transition-all disabled:opacity-50"
             >
-              {loading === 'reveal' ? '...' : 'סיים סיבוב'}
+              {loading === 'reveal' ? <Spinner /> : 'סיים סיבוב'}
             </button>
           </>
         ) : (
@@ -174,7 +175,7 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
               disabled={!guess || loading === 'guess'}
               className="w-full py-3.5 rounded-xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
             >
-              {loading === 'guess' ? '...' : 'שלח ניחוש'}
+              {loading === 'guess' ? <Spinner /> : 'שלח ניחוש'}
             </button>
           </div>
         )}
