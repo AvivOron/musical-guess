@@ -30,6 +30,7 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
     if (typeof window === 'undefined') return 1;
     return parseFloat(localStorage.getItem(VOLUME_KEY) ?? '1');
   });
+  const isIOS = typeof navigator !== 'undefined' && /iP(hone|ad|od)/.test(navigator.userAgent);
 
   const wrap = (key: 'guess' | 'reveal', fn: () => void | Promise<void>) => async () => {
     if (loading) return;
@@ -163,19 +164,21 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
         )}
       </div>
 
-      {/* Volume */}
-      <div className="w-full max-w-sm flex items-center gap-3">
-        <Volume2 className="w-4 h-4 text-zinc-500 shrink-0" />
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={volume}
-          onChange={(e) => handleVolume(parseFloat(e.target.value))}
-          className="flex-1 accent-yellow-400 h-1 rounded-full"
-        />
-      </div>
+      {/* Volume — hidden on iOS where audio.volume is read-only */}
+      {!isIOS && (
+        <div className="w-full max-w-sm flex items-center gap-3">
+          <Volume2 className="w-4 h-4 text-zinc-500 shrink-0" />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={volume}
+            onChange={(e) => handleVolume(parseFloat(e.target.value))}
+            className="flex-1 accent-yellow-400 h-1 rounded-full"
+          />
+        </div>
+      )}
 
       {/* Guess input */}
       <div className="w-full max-w-sm">
