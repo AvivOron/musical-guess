@@ -204,6 +204,37 @@ export async function nextRound(code: string): Promise<RoomState | null> {
   return room;
 }
 
+export async function kickPlayer(code: string, hostId: string, targetId: string): Promise<RoomState | null> {
+  const room = await getRoom(code);
+  if (!room || room.hostId !== hostId) return null;
+  if (targetId === hostId) return null;
+  room.players = room.players.filter((p) => p.id !== targetId);
+  delete room.guesses[targetId];
+  room.submittedIds = room.submittedIds.filter((id) => id !== targetId);
+
+  if (room.phase === 'listening' && room.players.length > 0 && room.submittedIds.length === room.players.length) {
+    const correctYear = room.currentSong!.year;
+    const results: RoundResult[] = room.players.map((p) => {
+      const guess = room.guesses[p.id] ?? 0;
+      const distance = Math.abs(guess - correctYear);
+      return { playerId: p.id, playerName: p.name, guess, distance, won: false };
+    });
+    const minDist = Math.min(...results.map((r) => r.distance));
+    results.forEach((r) => {
+      if (r.distance === minDist) {
+        r.won = true;
+        const player = room.players.find((p) => p.id === r.playerId)!;
+        player.score += r.distance === 0 ? 2 : 1;
+      }
+    });
+    room.roundResults = results;
+    room.phase = 'revealing';
+  }
+
+  await saveRoom(room);
+  return room;
+}
+
 export async function popNextSeed(code: string): Promise<SongSeed | null> {
   const room = await getRoom(code);
   if (!room || room.deck.length === 0) return null;

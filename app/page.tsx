@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRoom } from '@/lib/use-room';
 import LobbyScreen from '@/components/lobby-screen';
 import LoadingScreen from '@/components/loading-screen';
@@ -25,12 +25,20 @@ export default function Home() {
     return id;
   });
 
-  const [inviteCode, setInviteCode] = useState<string | null>(() => {
+  const [inviteCode] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('code');
   });
 
   const { room, setRoom, playing, setPlaying } = useRoom(roomCode);
+
+  useEffect(() => {
+    if (!room || !roomCode) return;
+    if (!room.players.find((p) => p.id === playerId)) {
+      setRoomCode(null);
+      setRoom(null);
+    }
+  }, [room]);
 
   const handleCreate = async (hostName: string, totalRounds: number) => {
     const res = await fetch(`${BASE}/api/room/create`, {
@@ -108,12 +116,19 @@ export default function Home() {
     });
   };
 
+  const handleKick = async (targetId: string) => {
+    await fetch(`${BASE}/api/room/kick`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, hostId: playerId, targetId }),
+    });
+  };
+
   if (!roomCode || !room) {
     return <LobbyScreen onCreate={handleCreate} onJoin={handleJoin} inviteCode={inviteCode} />;
   }
 
   const isHost = room.hostId === playerId;
-  const me = room.players.find((p) => p.id === playerId);
 
   if (room.phase === 'lobby') {
     return (
@@ -123,6 +138,7 @@ export default function Home() {
         room={room}
         isHost={isHost}
         onStart={handleStart}
+        onKick={handleKick}
       />
     );
   }
@@ -141,6 +157,7 @@ export default function Home() {
         onPlay={handlePlay}
         onGuess={handleGuess}
         onReveal={handleReveal}
+        onKick={handleKick}
       />
     );
   }

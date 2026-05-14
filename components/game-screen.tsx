@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Check, Music2 } from 'lucide-react';
+import { Play, Pause, Check, Music2, Volume2 } from 'lucide-react';
 import Spinner from './spinner';
 import { ServerPlayer } from '@/lib/server/store';
+
+const VOLUME_KEY = 'hitster_volume';
 
 type Props = {
   previewUrl: string;
@@ -15,14 +17,19 @@ type Props = {
   onPlay: (playing: boolean) => Promise<void>;
   onGuess: (year: number) => Promise<void>;
   onReveal: () => Promise<void>;
+  onKick?: (targetId: string) => Promise<void>;
 };
 
-export default function GameScreen({ previewUrl, players, submittedIds, playerId, isHost, playing, onPlay, onGuess, onReveal }: Props) {
+export default function GameScreen({ previewUrl, players, submittedIds, playerId, isHost, playing, onPlay, onGuess, onReveal, onKick }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [guess, setGuess] = useState('');
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [loading, setLoading] = useState<'guess' | 'reveal' | null>(null);
+  const [volume, setVolume] = useState(() => {
+    if (typeof window === 'undefined') return 1;
+    return parseFloat(localStorage.getItem(VOLUME_KEY) ?? '1');
+  });
 
   const wrap = (key: 'guess' | 'reveal', fn: () => void | Promise<void>) => async () => {
     if (loading) return;
@@ -55,6 +62,15 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
     if (playing && (isHost || audioUnlocked)) audio.play().catch(() => {});
     else audio.pause();
   }, [playing, audioUnlocked]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  const handleVolume = (v: number) => {
+    setVolume(v);
+    localStorage.setItem(VOLUME_KEY, String(v));
+  };
 
   const togglePlay = () => onPlay(!playing);
 
@@ -147,6 +163,20 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
         )}
       </div>
 
+      {/* Volume */}
+      <div className="w-full max-w-sm flex items-center gap-3">
+        <Volume2 className="w-4 h-4 text-zinc-500 shrink-0" />
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={volume}
+          onChange={(e) => handleVolume(parseFloat(e.target.value))}
+          className="flex-1 accent-yellow-400 h-1 rounded-full"
+        />
+      </div>
+
       {/* Guess input */}
       <div className="w-full max-w-sm">
         {submitted ? (
@@ -194,8 +224,16 @@ export default function GameScreen({ previewUrl, players, submittedIds, playerId
               } ${isMe ? 'ring-1 ring-yellow-400/30' : ''}`}
             >
               <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${done ? 'bg-green-400' : 'bg-zinc-700'}`} />
-              <span className={`text-sm truncate ${isMe ? 'text-white font-semibold' : 'text-zinc-400'}`}>{p.name}</span>
+              <span className={`text-sm truncate flex-1 ${isMe ? 'text-white font-semibold' : 'text-zinc-400'}`}>{p.name}</span>
               {p.isHost && <span className="text-yellow-400 text-xs shrink-0">★</span>}
+              {isHost && !p.isHost && (
+                <button
+                  onClick={() => onKick?.(p.id)}
+                  className="text-zinc-700 hover:text-red-400 transition-colors text-xs shrink-0 leading-none"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           );
         })}

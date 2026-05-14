@@ -11,10 +11,11 @@ type Props = {
   room?: ClientRoom;
   isHost?: boolean;
   onStart?: () => Promise<void>;
+  onKick?: (targetId: string) => Promise<void>;
   inviteCode?: string | null;
 };
 
-export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, inviteCode }: Props) {
+export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, onKick, inviteCode }: Props) {
   const [tab, setTab] = useState<'create' | 'join'>(inviteCode ? 'join' : 'create');
   const [name, setName] = useState('');
   const [code, setCode] = useState(inviteCode ? inviteCode.toUpperCase().split('') : ['', '', '', '']);
@@ -71,6 +72,14 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, i
               </div>
               <span className="flex-1 font-medium">{p.name}</span>
               {p.isHost && <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full">מארח</span>}
+              {isHost && !p.isHost && (
+                <button
+                  onClick={() => onKick?.(p.id)}
+                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors px-2 py-0.5 rounded-full hover:bg-red-400/10"
+                >
+                  הסר
+                </button>
+              )}
             </div>
           ))}
         </div>
