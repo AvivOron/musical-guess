@@ -40,11 +40,11 @@ export default function Home() {
     }
   }, [room]);
 
-  const handleCreate = async (hostName: string, totalRounds: number) => {
+  const handleCreate = async (hostName: string, totalRounds: number, genre: string) => {
     const res = await fetch(`${BASE}/api/room/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hostId: playerId, hostName, totalRounds }),
+      body: JSON.stringify({ hostId: playerId, hostName, totalRounds, genre }),
     });
     const { roomCode: code } = await res.json();
     const roomRes = await fetch(`${BASE}/api/room/join?code=${code}`);

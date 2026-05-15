@@ -1,5 +1,5 @@
 import { Redis } from '@upstash/redis';
-import { SongSeed, shuffleDeck, SONG_SEEDS } from '../songs';
+import { Genre, SongSeed, shuffleDeck, SONGS_BY_GENRE } from '../songs';
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
@@ -37,6 +37,7 @@ export type RoomState = {
   deck: SongSeed[];
   round: number;
   totalRounds: number;
+  genre: Genre;
 };
 
 function key(code: string) {
@@ -58,7 +59,7 @@ function makeCode(): string {
   return code;
 }
 
-export async function createRoom(hostId: string, hostName: string, totalRounds: number): Promise<RoomState> {
+export async function createRoom(hostId: string, hostName: string, totalRounds: number, genre: Genre = 'international'): Promise<RoomState> {
   let code = makeCode();
   while (await getRoom(code)) code = makeCode();
 
@@ -71,9 +72,10 @@ export async function createRoom(hostId: string, hostName: string, totalRounds: 
     guesses: {},
     submittedIds: [],
     roundResults: [],
-    deck: shuffleDeck(SONG_SEEDS),
+    deck: shuffleDeck(SONGS_BY_GENRE[genre]),
     round: 0,
     totalRounds,
+    genre,
   };
   await saveRoom(room);
   return room;
@@ -91,7 +93,7 @@ export async function restartRoom(code: string, hostId: string, totalRounds?: nu
   room.guesses = {};
   room.submittedIds = [];
   room.roundResults = [];
-  room.deck = shuffleDeck(SONG_SEEDS);
+  room.deck = shuffleDeck(SONGS_BY_GENRE[room.genre ?? 'international']);
   room.players.forEach((p) => { p.score = 0; });
   await saveRoom(room);
   return room;

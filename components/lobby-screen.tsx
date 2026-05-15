@@ -2,11 +2,12 @@
 
 import { useState, useRef } from 'react';
 import { Music2, Users, Share2, Check } from 'lucide-react';
+import { Genre } from '@/lib/songs';
 import Spinner from './spinner';
 import { ClientRoom } from '@/lib/use-room';
 
 type Props = {
-  onCreate: (hostName: string, totalRounds: number) => void;
+  onCreate: (hostName: string, totalRounds: number, genre: Genre) => void;
   onJoin: (code: string, playerName: string) => void;
   room?: ClientRoom;
   isHost?: boolean;
@@ -28,6 +29,7 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, o
     try { await fn(); } finally { setLoading(false); }
   };
   const [rounds, setRounds] = useState(10);
+  const [genre, setGenre] = useState<Genre>('international');
   const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
   const codeStr = code.join('');
 
@@ -148,8 +150,22 @@ export default function LobbyScreen({ onCreate, onJoin, room, isHost, onStart, o
                 className="flex-1 bg-transparent text-white text-left focus:outline-none w-12"
               />
             </div>
+            <div className="flex rounded-2xl overflow-hidden bg-zinc-900 p-1 gap-1">
+              <button
+                onClick={() => setGenre('international')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${genre === 'international' ? 'bg-yellow-400 text-zinc-950 shadow' : 'text-zinc-400 hover:text-white'}`}
+              >
+                🌍 בינלאומי
+              </button>
+              <button
+                onClick={() => setGenre('israeli')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${genre === 'israeli' ? 'bg-yellow-400 text-zinc-950 shadow' : 'text-zinc-400 hover:text-white'}`}
+              >
+                🇮🇱 ישראלי
+              </button>
+            </div>
             <button
-              onClick={wrap(() => { if (name.trim()) return onCreate(name.trim(), rounds); })}
+              onClick={wrap(() => { if (name.trim()) return onCreate(name.trim(), rounds, genre); })}
               disabled={!name.trim() || loading}
               className="w-full py-4 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-base hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-yellow-400/20"
             >
